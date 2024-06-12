@@ -1,0 +1,18 @@
+CREATE DATABASE filesharer;
+\c filesharer
+
+CREATE TABLE Users (
+    UserID SERIAl PRIMARY KEY,
+    Username VARCHAR(50) NOT NULL,
+    Email VARCHAR(100) NOT NULL,
+    Password VARCHAR(100) NOT NULL,
+    RegistrationDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Files (
+    FileID SERIAL PRIMARY KEY,
+    FileName VARCHAR(255) NOT NULL,
+    UploaderID INT,
+    UploadDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UploaderID) REFERENCES Users(UserID)
+);

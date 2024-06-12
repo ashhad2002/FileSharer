@@ -1,0 +1,8 @@
+/file-sharing-client/node_modules
+/file-sharing-client/bin
+/bin
+/obj
+/properties
+appsettings.json
+appsettings.Development.json
+original-mason-422007-r3-c18cda8a5724.json
