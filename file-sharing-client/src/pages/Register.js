@@ -2,71 +2,88 @@ import { useState } from "react";
 import httpClient from "../httpClient";
 
 function Register() {
-    const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [message, setMessage] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
 
-    const handleSubmit = async () => {
-        try {
-            const response = await httpClient.post("/register", {
-                username,
-                email,
-                password
-            });
+  const handleSubmit = async () => {
+    try {
+      const response = await httpClient.post("/register", {
+        username,
+        email,
+        password
+      });
 
-            if (response.status === 200) {
-                setMessage("Registration successful!");
-            }
-        } catch (error) {
-            setMessage("Registration failed: " + error.response.data);
-        }
-    };
+      if (response.status === 200) {
+        setMessage("Registration successful!");
+        setUsername('');
+        setEmail('');
+        setPassword('');
+      }
+    } catch (error) {
+      setMessage("Registration failed: " + (error.response?.data || error.message));
+    }
+  };
 
-    return (
-        <div className="flex justify-center items-center h-screen">
-            <div className="border-2 rounded w-60 h-auto p-5 justify-center items-center text-center">
-                <h1 className="font-bold text-xl mb-4">Register</h1>
-                {message && <div className="mb-4 text-red-500">{message}</div>}
-                <div className="mb-4">
-                    <label className="block mb-2">Username</label>
-                    <input
-                        className="border-2 w-full p-2"
-                        onChange={(e) => setUsername(e.target.value)}
-                        name="username"
-                        type="text"
-                        value={username}
-                    />
-                </div>
-                <div className="mb-4">
-                    <label className="block mb-2">Email</label>
-                    <input
-                        className="border-2 w-full p-2"
-                        onChange={(e) => setEmail(e.target.value)}
-                        name="email"
-                        type="email"
-                        value={email}
-                    />
-                </div>
-                <div className="mb-4">
-                    <label className="block mb-2">Password</label>
-                    <input
-                        className="border-2 w-full p-2"
-                        onChange={(e) => setPassword(e.target.value)}
-                        name="password"
-                        type="password"
-                        value={password}
-                    />
-                </div>
-                <button
-                    className="border-2 rounded px-4 py-2 mt-4 bg-blue-500 text-white"
-                    onClick={handleSubmit}
-                >
-                    Submit
-                </button>
-            </div>
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+      <div className="w-full max-w-sm bg-white rounded-lg shadow-lg p-6">
+        <h1 className="text-3xl font-bold text-center text-blue-600 mb-6">Register</h1>
+
+        {message && (
+          <div className={`text-center p-3 mb-6 rounded ${message.includes('successful') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {message}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <input
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              onChange={(e) => setUsername(e.target.value)}
+              name="username"
+              type="text"
+              value={username}
+              placeholder="Enter your username"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              onChange={(e) => setEmail(e.target.value)}
+              name="email"
+              type="email"
+              value={email}
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              onChange={(e) => setPassword(e.target.value)}
+              name="password"
+              type="password"
+              value={password}
+              placeholder="Enter your password"
+            />
+          </div>
+
+          <button
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition"
+            onClick={handleSubmit}
+          >
+            Submit
+          </button>
         </div>
-    );
+      </div>
+    </div>
+  );
 }
 
 export default Register;

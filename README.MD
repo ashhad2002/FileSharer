@@ -2,16 +2,6 @@
 
 This is the New File Sharer I made, which is a remake of an old first year project of mine. I added a whole bunch of new things, such as JWT, Google Cloud Storage, TailwindCSS. 
 
-There's still a lot of plans I have for this app. Here's a list of a few:
-
-- Deployment
-- Thumbnails
-- Better UI
-- More robust JWT management
-- Admin dashboard????
-
-...if I ever get around to it.
-
 ## Usage
 
 Run dotnet restore, then dotnet run to run the server application. It's a minimal API application, I may change it to use MVC, but this is more than enough for now. You'll need to produce an appsettings.json in the root directory that looks something like this:

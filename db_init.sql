@@ -12,7 +12,9 @@ CREATE TABLE Users (
 CREATE TABLE Files (
     FileID SERIAL PRIMARY KEY,
     FileName VARCHAR(255) NOT NULL,
+    StoredFileName VARCHAR(255),
     UploaderID INT,
     UploadDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (UploaderID) REFERENCES Users(UserID)
+    FOREIGN KEY (UploaderID) REFERENCES Users(UserID),
+    Thumbnail BYTEA
 );

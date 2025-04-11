@@ -1,18 +1,16 @@
 using Google.Cloud.Storage.V1;
 using Google.Apis.Auth.OAuth2;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System;
 using System.Text;
-using System.IO;
 using System.Text.Json;
-using System.Linq;
-using System.Collections.Generic;
 using Npgsql;
-using BCrypt.Net;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Png;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 string json = File.ReadAllText("appsettings.json");
 var config = JsonSerializer.Deserialize<Config>(json);
@@ -64,23 +62,40 @@ app.MapGet("/files", () =>
 {
     List<FileEntry> files = new List<FileEntry>();
 
-    using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
+    using (var connection = new NpgsqlConnection(connectionString))
     {
         connection.Open();
-        string query = "SELECT * FROM Files";
-        using (NpgsqlCommand cmd = new NpgsqlCommand(query, connection))
+        string query = @"
+            SELECT 
+                f.FileId,
+                f.FileName,
+                f.UploaderID,
+                f.UploadDate,
+                f.Thumbnail,
+                u.Username AS UploaderName
+            FROM Files f
+            LEFT JOIN Users u ON f.UploaderID = u.UserId";
+
+        using (var cmd = new NpgsqlCommand(query, connection))
         {
-            using (NpgsqlDataReader reader = cmd.ExecuteReader())
+            using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
                 {
-                    FileEntry file = new FileEntry
+                    var file = new FileEntry
                     {
                         FileId = reader.GetInt32(reader.GetOrdinal("FileId")),
                         FileName = reader.GetString(reader.GetOrdinal("FileName")),
                         UploaderID = reader.IsDBNull(reader.GetOrdinal("UploaderID")) ? -1 : reader.GetInt32(reader.GetOrdinal("UploaderID")),
-                        UploadDate = reader.GetDateTime(reader.GetOrdinal("UploadDate"))
+                        UploadDate = reader.GetDateTime(reader.GetOrdinal("UploadDate")),
+                        Thumbnail = reader.IsDBNull(reader.GetOrdinal("Thumbnail"))
+                            ? null
+                            : Convert.ToBase64String((byte[])reader["Thumbnail"]),
+                        UploaderName = reader.IsDBNull(reader.GetOrdinal("UploaderName"))
+                            ? "Anonymous"
+                            : reader.GetString(reader.GetOrdinal("UploaderName"))
                     };
+
                     files.Add(file);
                 }
             }
@@ -90,66 +105,156 @@ app.MapGet("/files", () =>
     return files;
 });
 
-app.MapGet("/downloadfile", (string fileName) =>
+app.MapGet("/downloadfile", async (int fileId) =>
 {
-    using (var memoryStream = new MemoryStream())
+    using (var connection = new NpgsqlConnection(connectionString))
     {
-        storageClient.DownloadObject(bucketName, fileName, memoryStream);
-        return new FileContentResult(memoryStream.ToArray(), "application/octet-stream")
+        await connection.OpenAsync();
+        string query = "SELECT FileName, StoredFileName FROM Files WHERE FileId = @FileId";
+        using (var cmd = new NpgsqlCommand(query, connection))
         {
-            FileDownloadName = fileName
-        };
-    }
-});
-
-app.MapPost("/upload", async (IFormFile file, IWebHostEnvironment env) =>
-{
-    try {
-        using var memoryStream = new MemoryStream();
-        await file.CopyToAsync(memoryStream);
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        
-        await storageClient.UploadObjectAsync(bucketName, file.FileName, null, memoryStream);
-        Console.WriteLine($"Uploaded {file.FileName} to {bucketName}.");
-
-        using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
-        {
-            connection.Open();
-            string query = $"INSERT INTO Files (FileName) VALUES (@FileName)";
-            using (NpgsqlCommand cmd = new NpgsqlCommand(query, connection))
+            cmd.Parameters.AddWithValue("@FileId", fileId);
+            using (var reader = await cmd.ExecuteReaderAsync())
             {
-                cmd.Parameters.AddWithValue("@FileName", file.FileName);
-                cmd.ExecuteNonQuery();
+                if (await reader.ReadAsync())
+                {
+                    var originalFileName = reader.GetString(reader.GetOrdinal("FileName"));
+                    var storedFileName = reader.GetString(reader.GetOrdinal("StoredFileName"));
+
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        storageClient.DownloadObject(bucketName, storedFileName, memoryStream);
+                        return Results.File(
+                            fileContents: memoryStream.ToArray(),
+                            contentType: "application/octet-stream",
+                            fileDownloadName: originalFileName
+                        );
+                    }
+                }
             }
         }
     }
-    catch(Exception ex) {
-        Console.WriteLine("", ex);
-    }
-    return Results.Ok(new { fileName = file.FileName });
 
-    //code to upload locally, this is probably the easier way as compared to GCS, but its not as cool
-    // var uploads = Path.Combine(env.ContentRootPath, "uploads");
-
-    // if (!Directory.Exists(uploads))
-    // {
-    //     Directory.CreateDirectory(uploads);
-    // }
-
-    // Console.WriteLine(file.FileName);
-    // var filePath = Path.Combine(uploads, file.FileName);
-
-    // using (var stream = new FileStream(filePath, FileMode.Create))
-    // {
-    //     await file.CopyToAsync(stream);
-    // }
+    return Results.NotFound();
 });
+
+app.MapPost("/upload", async (HttpRequest request, IFormFile file, IWebHostEnvironment env) =>
+{
+    int? uploaderId = null;
+
+    try
+    {
+        string? token = request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+        if (!string.IsNullOrEmpty(token) && token != "null") // Token can be casted to a literal null string, check for this
+        {
+            var handler = new JwtSecurityTokenHandler();
+
+            if (!handler.CanReadToken(token))
+            {
+                return Results.Unauthorized();
+            }
+
+            var jwtToken = handler.ReadJwtToken(token);
+
+            var username = jwtToken.Claims.FirstOrDefault(c => c.Type == "username")?.Value;
+
+            if (string.IsNullOrEmpty(username))
+            {
+                return Results.Unauthorized();
+            }
+
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                string userQuery = "SELECT UserId FROM Users WHERE Username = @Username";
+                using (var userCmd = new NpgsqlCommand(userQuery, connection))
+                {
+                    userCmd.Parameters.AddWithValue("@Username", username);
+                    var result = await userCmd.ExecuteScalarAsync();
+                    if (result != null)
+                    {
+                        uploaderId = Convert.ToInt32(result);
+                    }
+                    else
+                    {
+                        return Results.Unauthorized();
+                    }
+                }
+            }
+        }
+    }
+    catch
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var originalFileName = file.FileName;
+        var uniqueId = Guid.NewGuid().ToString();
+        var extension = Path.GetExtension(file.FileName);
+        var storedFileName = $"{Path.GetFileNameWithoutExtension(originalFileName)}_{uniqueId}{extension}";
+
+        using var memoryStream = new MemoryStream();
+        await file.CopyToAsync(memoryStream);
+        memoryStream.Seek(0, SeekOrigin.Begin);
+
+        await storageClient.UploadObjectAsync(bucketName, storedFileName, null, memoryStream);
+        memoryStream.Seek(0, SeekOrigin.Begin);
+
+        byte[]? thumbnailBytes = null;
+        if (IsImageExtension(extension))
+        {
+            try
+            {
+                using var image = await Image.LoadAsync(memoryStream);
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Size = new Size(150, 150),
+                    Mode = ResizeMode.Max
+                }));
+
+                using var thumbStream = new MemoryStream();
+                await image.SaveAsync(thumbStream, new PngEncoder());
+                thumbnailBytes = thumbStream.ToArray();
+            }
+            catch
+            {
+                thumbnailBytes = null;
+            }
+        }
+
+        using (var connection = new NpgsqlConnection(connectionString))
+        {
+            await connection.OpenAsync();
+            string query = "INSERT INTO Files (FileName, StoredFileName, Thumbnail, UploaderId) VALUES (@FileName, @StoredFileName, @Thumbnail, @UploaderId)";
+            using (var cmd = new NpgsqlCommand(query, connection))
+            {
+                cmd.Parameters.AddWithValue("@FileName", originalFileName);
+                cmd.Parameters.AddWithValue("@StoredFileName", storedFileName);
+                cmd.Parameters.AddWithValue("@Thumbnail", thumbnailBytes ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@UploaderId", uploaderId ?? (object)DBNull.Value);
+                await cmd.ExecuteNonQueryAsync();
+            }
+        }
+    }
+    catch
+    {
+        return Results.StatusCode(500);
+    }
+
+    return Results.Ok();
+});
+
+bool IsImageExtension(string extension)
+{
+    return extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".webp" || extension == ".JPG";
+}
 
 app.MapPost("/register", async (User user) => {   
     try
     {
-        Console.WriteLine("user:" + user.Username);
-        Console.WriteLine("user:" + user.Password);
         using (NpgsqlConnection connection = new NpgsqlConnection(connectionString))
         {
             await connection.OpenAsync();
@@ -213,13 +318,13 @@ app.MapPost("/login", async (User loginUser) =>
                             var tokenDescriptor = new SecurityTokenDescriptor
                             {
                                 Subject = new System.Security.Claims.ClaimsIdentity(new[] { new System.Security.Claims.Claim("username", loginUser.Username) }),
-                                Expires = DateTime.UtcNow.AddHours(1),
+                                Expires = DateTime.UtcNow.AddHours(1), 
                                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(JWTKEY)), SecurityAlgorithms.HmacSha256Signature)
                             };
                             var token = tokenHandler.CreateToken(tokenDescriptor);
                             var tokenString = tokenHandler.WriteToken(token);
 
-                            return Results.Ok(new { token = tokenString });
+                            return Results.Ok(new { token = tokenString, userName=loginUser.Username });
                         }
                     }
                 }
@@ -247,8 +352,11 @@ public class FileEntry
 {
     public int FileId { get; set; }
     public string FileName { get; set; } = "default";
+    public string StoredFileName { get; set; } = "";
     public int UploaderID { get; set; }
     public DateTime UploadDate { get; set; }
+    public string? Thumbnail { get; set; }
+    public string UploaderName { get; set; } = "Anonymous";
 }
 
 public class Config
@@ -262,7 +370,7 @@ public class Config
 
 public class User
 {
-    public string Username { get; set; }
-    public string Email { get; set; }
-    public string Password { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 }
