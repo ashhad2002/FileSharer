@@ -2,18 +2,64 @@ import { useState, useEffect, useRef } from 'react';
 import httpClient from '../httpClient';
 import File from '../component/File';
 import { Link, useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCloudUploadAlt, faFolderOpen, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+
 
 function Home() {
-  const [file, setFile] = useState(null);
+  // const [file, setFile] = useState(null);
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const [toast, setToast] = useState('');
+
   const fileInputRef = useRef(null);
   const isLoggedIn = localStorage.getItem('token') !== null;
   const navigate = useNavigate();
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+  const handleFiles = (files) => {
+    Array.from(files).forEach((file) => {
+      const newQueue = [...uploadQueue, { name: file.name, progress: 0 }];
+      setUploadQueue(newQueue);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const token = localStorage.getItem('token');
+
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`,
+        },
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadQueue((prev) =>
+            prev.map((f) => (f.name === file.name ? { ...f, progress: percent } : f))
+          );
+        }
+      };
+
+      httpClient.post('/upload', formData, config)
+        .then(() => {
+          showToast(`${file.name} uploaded successfully!`);
+          getFiles();
+        })
+        .catch((err) => {
+          console.error(err);
+          alert(`Failed to upload ${file.name}`);
+        })
+        .finally(() => {
+          setUploadQueue((prev) => prev.filter((f) => f.name !== file.name));
+        });
+    });
+  };
+
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(''), 3000);
   };
 
   const filterData = (item) => {
@@ -24,38 +70,6 @@ function Home() {
     return (
       item.fileName.toLowerCase().includes(term)
     );
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      alert('Please select a file first.');
-      return;
-    }
-    setLoading(true); 
-  
-    const formData = new FormData();
-    formData.append('file', file);
-  
-    try {
-      const token = localStorage.getItem('token');
-  
-      await httpClient.post('/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-  
-      alert('File uploaded successfully!');
-      setFile(null);
-      fileInputRef.current.value = '';
-      getFiles();
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Upload failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const getFiles = () => {
@@ -102,33 +116,62 @@ function Home() {
         )}
       </header>
 
-      <section className="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
-        <label className="block mb-2 text-lg font-medium text-gray-700">
-          Upload a file
-        </label>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="block w-full mb-4 text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
-        />
-        <button
-          onClick={handleUpload}
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition flex items-center justify-center"
-        >
-          {loading ? (
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-          ) : (
-            'Upload'
-          )}
-        </button>
+      <section className="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto mb-10">
+        <label className="block mb-4 text-lg font-medium text-gray-700">Upload a file</label>
 
+        <div
+          className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition ${dragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+          }}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="flex flex-col items-center justify-center">
+            <FontAwesomeIcon icon={faCloudUploadAlt} className="text-5xl text-blue-500 mb-4" />
+            <p className="text-lg font-medium text-gray-700 mb-2">Drag & drop files here</p>
+            <p className="text-gray-500 mb-4">or</p>
+            <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-full">
+              <FontAwesomeIcon icon={faFolderOpen} className="mr-2" /> Browse Files
+            </button>
+            <input type="file" ref={fileInputRef} multiple onChange={(e) => handleFiles(e.target.files)} className="hidden" />
+          </div>
+        </div>
+
+        {uploadQueue.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-4">Uploading files...</h3>
+            <div className="space-y-4">
+              {uploadQueue.map(({ name, progress }) => (
+                <div key={name}>
+                  <div className="flex justify-between text-sm text-gray-700 mb-1">
+                    <span className="truncate" style={{ maxWidth: '70%' }}>{name}</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
+      {toast && (
+        <div className="fixed bottom-6 right-6 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center transition-all duration-300">
+          <FontAwesomeIcon icon={faCheckCircle} className="mr-2" />
+          <span>{toast}</span>
+        </div>
+      )}
+
+      
       <section className="mt-10">
         <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Uploaded Files</h2>
 
