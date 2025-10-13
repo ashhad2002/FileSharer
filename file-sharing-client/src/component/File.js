@@ -8,19 +8,22 @@ function File({ item, index }) {
   const handleDownload = (item) => {
     setDownloading(true);
 
-    httpClient.get(`/downloadfile?fileId=${item.fileId}`, { responseType: "blob" })
+    httpClient.get(`/downloadurl?fileId=${item.fileId}`)
       .then((res) => {
-        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const { downloadUrl, fileName } = res.data;
+        
+        // Create a temporary link to trigger the download
         const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", item.fileName); //We already have the filename so no need to get it from backend response
+        link.href = downloadUrl;
+        link.setAttribute("download", fileName);
+        link.setAttribute("target", "_blank"); // Open in new tab as fallback
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
       })
       .catch((e) => {
         console.error("Download error:", e);
+        alert("Failed to download file. Please try again.");
       })
       .finally(() => {
         setDownloading(false);

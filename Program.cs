@@ -11,6 +11,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Png;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 
 string json = File.ReadAllText("appsettings.json");
 var config = JsonSerializer.Deserialize<Config>(json);
@@ -105,7 +106,7 @@ app.MapGet("/files", () =>
     return files;
 });
 
-app.MapGet("/downloadfile", async (int fileId) =>
+app.MapGet("/downloadurl", async (int fileId) =>
 {
     using (var connection = new NpgsqlConnection(connectionString))
     {
@@ -121,15 +122,11 @@ app.MapGet("/downloadfile", async (int fileId) =>
                     var originalFileName = reader.GetString(reader.GetOrdinal("FileName"));
                     var storedFileName = reader.GetString(reader.GetOrdinal("StoredFileName"));
 
-                    using (var memoryStream = new MemoryStream())
-                    {
-                        storageClient.DownloadObject(bucketName, storedFileName, memoryStream);
-                        return Results.File(
-                            fileContents: memoryStream.ToArray(),
-                            contentType: "application/octet-stream",
-                            fileDownloadName: originalFileName
-                        );
-                    }
+                    // Generate signed URL valid for 1 hour
+                    var signedUrl = UrlSigner.FromCredential((ServiceAccountCredential)credential.UnderlyingCredential)
+                        .Sign(bucketName, storedFileName, TimeSpan.FromHours(1), HttpMethod.Get);
+
+                    return Results.Ok(new { downloadUrl = signedUrl, fileName = originalFileName });
                 }
             }
         }
