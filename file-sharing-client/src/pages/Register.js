@@ -1,13 +1,20 @@
 import { useState } from "react";
 import httpClient from "../httpClient";
+import { useNavigate } from 'react-router-dom';
 
 function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async () => {
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      setMessage("Please fill in all fields");
+      return;
+    }
+
     try {
       const response = await httpClient.post("/register", {
         username,
@@ -20,6 +27,7 @@ function Register() {
         setUsername('');
         setEmail('');
         setPassword('');
+        navigate('/login');
       }
     } catch (error) {
       setMessage("Registration failed: " + (error.response?.data || error.message));

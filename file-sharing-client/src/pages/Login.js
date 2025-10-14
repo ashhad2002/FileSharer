@@ -9,6 +9,11 @@ function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
+    if (!username.trim() || !password.trim()) {
+      setMessage("Please fill in all fields");
+      return;
+    }
+
     try {
       const response = await httpClient.post("/login", {
         username,
