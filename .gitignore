@@ -1,8 +1,12 @@
 /file-sharing-client/node_modules
 /file-sharing-client/bin
-/bin
-/obj
-/properties
+/file-sharing-client/coverage
 appsettings.json
 appsettings.Development.json
 original-mason-422007-r3-c18cda8a5724.json
+TESTING.md
+*.nuget.*
+project.assets.json
+project.nuget.cache
+**/bin/
+**/obj/
