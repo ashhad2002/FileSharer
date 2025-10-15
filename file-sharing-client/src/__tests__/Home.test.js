@@ -10,7 +10,7 @@ jest.mock('../httpClient', () => ({
   }
 }));
 
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Home from '../pages/Home';
 import httpClient from '../httpClient';
@@ -135,9 +135,7 @@ describe('Home Component', () => {
     
     const logoutButton = screen.getByRole('button', { name: /logout/i });
     
-    await act(async () => {
-      fireEvent.click(logoutButton);
-    });
+    fireEvent.click(logoutButton);
 
     expect(localStorageMock.removeItem).toHaveBeenCalledWith('token');
     expect(window.location.reload).toHaveBeenCalled();

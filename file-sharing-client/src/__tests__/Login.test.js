@@ -11,7 +11,7 @@ jest.mock('../httpClient', () => ({
   }
 }));
 
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Login from '../pages/Login';
 import httpClient from '../httpClient';
@@ -72,11 +72,9 @@ describe('Login Component', () => {
     const passwordInput = screen.getByPlaceholderText('Enter your password');
     const loginButton = screen.getByRole('button', { name: /submit/i });
 
-    await act(async () => {
-      fireEvent.change(usernameInput, { target: { value: 'testuser' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      fireEvent.click(loginButton);
-    });
+    fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+    fireEvent.change(passwordInput, { target: { value: 'password123' } });
+    fireEvent.click(loginButton);
 
     await waitFor(() => {
       expect(httpClient.post).toHaveBeenCalledWith('/login', {
@@ -97,11 +95,9 @@ describe('Login Component', () => {
     const passwordInput = screen.getByPlaceholderText('Enter your password');
     const loginButton = screen.getByRole('button', { name: /submit/i });
 
-    await act(async () => {
-      fireEvent.change(usernameInput, { target: { value: 'testuser' } });
-      fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } });
-      fireEvent.click(loginButton);
-    });
+    fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+    fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } });
+    fireEvent.click(loginButton);
 
     await waitFor(() => {
       expect(httpClient.post).toHaveBeenCalledWith('/login', {

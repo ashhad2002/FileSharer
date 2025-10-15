@@ -10,7 +10,7 @@ jest.mock('../httpClient', () => ({
   }
 }));
 
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Register from '../pages/Register';
 import httpClient from '../httpClient';
