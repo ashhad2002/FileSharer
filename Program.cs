@@ -345,6 +345,8 @@ app.MapControllers();
 
 app.Run();
 
+public partial class Program { }
+
 public class FileEntry
 {
     public int FileId { get; set; }
