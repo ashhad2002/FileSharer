@@ -38,7 +38,7 @@ jobs:
           "keyFilename": "test-key.json",
           "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
           "JWTKEY": "test-jwt-key-for-testing-purposes-only"
-        }' > appsettings.json
+        }' > bin/Release/net7.0/appsettings.json
 
     - name: Test .NET backend
       run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
