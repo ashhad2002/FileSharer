@@ -9,9 +9,16 @@ using FileSharer.Models;
 using FileSharer.Tests.TestHelpers;
 
 var builder = WebApplication.CreateBuilder(args);
-string configFile = builder.Environment.IsEnvironment("Test") ? "appsettings.Test.json" : "appsettings.json";
-string json = File.ReadAllText(configFile);
-var config = JsonSerializer.Deserialize<Config>(json) ?? throw new InvalidOperationException("Failed to load configuration");
+var environment = builder.Environment.EnvironmentName;
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{environment}.json", optional: true)
+    .AddEnvironmentVariables();
+
+var config = builder.Configuration.Get<Config>() 
+    ?? throw new InvalidOperationException("Failed to load configuration");
+
 
 StorageClient? storageClient = null;
 ServiceAccountCredential? serviceAccountCredential = null;
