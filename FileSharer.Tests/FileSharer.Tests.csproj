@@ -30,4 +30,9 @@
     <ProjectReference Include="..\FileSharer.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="appsettings.Test.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="test-key.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

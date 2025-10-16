@@ -25,13 +25,27 @@ jobs:
         cache: 'npm'
         cache-dependency-path: file-sharing-client/package-lock.json
 
+    - name: Create settings files
+      run: |
+        echo '{
+          "bucketName": "test-bucket",
+          "keyFilename": "test-key.json",
+          "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
+          "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
+        }' > appsettings.json
+        
+        echo '{
+          "bucketName": "test-bucket",
+          "keyFilename": "test-key.json",
+          "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
+          "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
+        }' > FileSharer.Tests/appsettings.Test.json
+
     - name: Restore .NET dependencies
       run: dotnet restore
 
     - name: Build .NET project
       run: dotnet build --no-restore --configuration Release
-
-    - name: Create test settings
       run: |
         echo '{
           "bucketName": "test-bucket",
@@ -39,6 +53,13 @@ jobs:
           "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
           "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
         }' > FileSharer.Tests/appsettings.Test.json
+        
+        echo '{
+          "bucketName": "test-bucket",
+          "keyFilename": "test-key.json",
+          "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
+          "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
+        }' > appsettings.json
 
     - name: Create dummy service account key
       run: |
