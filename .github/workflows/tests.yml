@@ -31,29 +31,29 @@ jobs:
     - name: Build .NET project
       run: dotnet build --no-restore --configuration Release
 
-    - name: Create appsettings.json for tests
+    - name: Create test settings
       run: |
         echo '{
           "bucketName": "test-bucket",
           "keyFilename": "test-key.json",
           "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
-          "JWTKEY": "test-jwt-key-for-testing-purposes-only"
-        }' > bin/Release/net7.0/appsettings.json
+          "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
+        }' > FileSharer.Tests/appsettings.Test.json
 
     - name: Create dummy service account key
       run: |
-        cat > bin/Release/net7.0/test-key.json << 'EOF'
+        cat > FileSharer.Tests/test-key.json << EOF
         {
           "type": "service_account",
           "project_id": "test-project",
           "private_key_id": "fake-key-id",
-          "private_key": "-----BEGIN PRIVATE KEY-----\nFAKE_KEY\n-----END PRIVATE KEY-----\n",
-          "client_email": "test@test-project.iam.gserviceaccount.com",
-          "client_id": "1234567890",
+          "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDY3E8o/6OReDGU9Lg3cqgVETUq6RX3eXtYD0NucNpJmXqA1/1Xw+n4MpRN+LBwB9TgRkrGD4I5Sf89W5pX5NUhz0zveGHmQM3e2MVtGBco3jVEMXufxqh3uZRVWkZxu6ZqpUQRlrEQCY94Fq9wVZwzsAGwv/2lUin7M2i/FV6nE9WHFsFKYNqjzEIcHKI7XD3FsbN3AUxLGzfxJ7ykFeH9eA3+wm9zJ8LB9CAXKqRjpRVou/yF+KHNPEQGsb/w9AtRYq2EGf9dp4gPJ6XtCCxzXL2zQGd4u/3X2P3WgTa5KfC56NJnVVG2OhjC6xHnVuGWmD/9KZF2MCJwGJmLhSjVAgMBAAECggEBAJnY5Wm6F2oIp2P3wj5nz+8P0qLXWVDfujB9CQWM8s3MoQE0BqEXhBw0vYtfYyX1hGG6YVEg54LUNg6oZCGJNf4HbYBM8zKyQpBZM7KxbMjJFWVHMXrM4uYU32h9sM3mFgKvB/Vk+eQI7MD8RX3tD9O9XmRtL4DicjSGOQKBgQDwkI/vh4e8n91F7WA2ekYJ6LYVI0c6F+EqPqqjTIOYWM+QN9Z7nqRsL+wt7Aw5Az5Co4zSCcN7IpfuEJAW8ysNOh5kF9dL4z9j6KuXTe38IUoGYFDwDMG8fUXnC+C1TvjhmH29SD3D0QGHjdTbe3a3LEiJZ0MwXJAEpJjQrwKBgQDn2+nNOqQQv8hD3yGXrwB2+ytQHRjxz8yN4q6M2qEwOfQD2ZZ7nQ2Yp9KmGxD6VeKo1KWO2gH7Q1TUUCy5lJwZ6QU5XR5kNwUGNQq9NpvmUlzPEv8Ppk2CSQb1KGRqk3dJ9uQ+lnUZkx0J4bU89BfKN1aQH6uBGGTvUQqR7wKBgQDJYK3hxHJhiGj1wG7GxEZiC1iQzfqvEyvhwxJ+KzYqPk3xGPTW/r6FRo1IYicwVtkgkR4zFQWj0eh0SAeP8tszEHl4WhIxz0hFh4iWvuPiK9NM5VIRXYlVHHLKDL1G+KV3d7/SuUoh0gWR8Vd3ru/vUF4ONW+AOTkR/bYE2QKBgHZwfpSz1bz3lNBDLrr3D6YD+ndvXE9t2M5jq3tlm1HXgd+ViUX0jP4r1+BiD6tG/uFM+VXWz3oYg1JF6wVygrxFKqz8Ems5aF3kQYQd6AZqA+Yah/AwuPHo3fH3ARG2Lj90WjxMfxbxN/nVQehxBaHFCmWVLthejD+7AbkLAoGBAN9f3tXfaF8H5RLpXF8Sg0MghJRG+FRBJn1ZrhdEXxJ+dc4v8Sa/hKEkEHQABfrAJPpPfS08n/40yG3AuQT3YOv3RPYZWVRGDz2XXHDiHN0HKG4kY5QXCIjNntO8A3VZXXhLBYxJ0dIBZ1ZTlQnUX4mN3jVJH73e2JvjeOsz\n-----END PRIVATE KEY-----\n",
+          "client_email": "test-service-account@test-project.iam.gserviceaccount.com",
+          "client_id": "123456789",
           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
           "token_uri": "https://oauth2.googleapis.com/token",
           "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@test-project.iam.gserviceaccount.com"
+          "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-service-account%40test-project.iam.gserviceaccount.com"
         }
         EOF
         
