@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Xunit;
+using FileSharer.Models;
 
 namespace FileSharer.Tests.Unit;
 
