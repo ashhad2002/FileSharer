@@ -41,6 +41,12 @@ jobs:
           "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
         }' > FileSharer.Tests/appsettings.Test.json
 
+    - name: Restore .NET dependencies
+      run: dotnet restore
+
+    - name: Build .NET project
+      run: dotnet build --no-restore --configuration Release
+
     - name: Create dummy service account key (test-key.json)
       run: |
         echo '{
@@ -55,12 +61,6 @@ jobs:
           "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
           "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-service-account%40test-project.iam.gserviceaccount.com"
         }' > bin/Release/net7.0/test-key.json
-
-    - name: Restore .NET dependencies
-      run: dotnet restore
-
-    - name: Build .NET project
-      run: dotnet build --no-restore --configuration Release
 
     - name: Test .NET backend
       run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
