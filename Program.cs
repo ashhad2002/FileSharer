@@ -6,15 +6,23 @@ using System.Text;
 using System.Text.Json;
 using FileSharer.Services;
 using FileSharer.Models;
-
-string json = File.ReadAllText("appsettings.json");
-var config = JsonSerializer.Deserialize<Config>(json);
-
-var credential = GoogleCredential.FromFile(config.keyFilename);
-var storageClient = StorageClient.Create(credential);
-var serviceAccountCredential = (ServiceAccountCredential)credential.UnderlyingCredential;
+using FileSharer.Tests.TestHelpers;
 
 var builder = WebApplication.CreateBuilder(args);
+string configFile = builder.Environment.IsEnvironment("Test") ? "appsettings.Test.json" : "appsettings.json";
+string json = File.ReadAllText(configFile);
+var config = JsonSerializer.Deserialize<Config>(json) ?? throw new InvalidOperationException("Failed to load configuration");
+
+StorageClient? storageClient = null;
+ServiceAccountCredential? serviceAccountCredential = null;
+
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    var credential = GoogleCredential.FromFile(config.keyFilename);
+    storageClient = StorageClient.Create(credential);
+    serviceAccountCredential = (ServiceAccountCredential)credential.UnderlyingCredential;
+}
+
 builder.Services.AddControllers();
 
 // Configure CORS
@@ -50,11 +58,20 @@ builder.Services.AddAuthorization();
 
 // Register services
 builder.Services.AddSingleton(config);
-builder.Services.AddSingleton(storageClient);
-builder.Services.AddSingleton(serviceAccountCredential);
+
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    builder.Services.AddSingleton(storageClient!);
+    builder.Services.AddSingleton(serviceAccountCredential!);
+    builder.Services.AddScoped<ICloudStorageService, CloudStorageService>();
+}
+else
+{
+    builder.Services.AddScoped<ICloudStorageService, MockCloudStorageService>();
+}
+
 builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ICloudStorageService, CloudStorageService>();
 
 var app = builder.Build();
 
