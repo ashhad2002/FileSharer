@@ -31,7 +31,7 @@ jobs:
     - name: Build .NET project
       run: dotnet build --no-restore --configuration Release
 
-    - name: Create appsettings.json for tests
+    - name: Create appsettings.json for tests and dummy key file
       run: |
         echo '{
           "bucketName": "test-bucket",
@@ -39,8 +39,8 @@ jobs:
           "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
           "JWTKEY": "test-jwt-key-for-testing-purposes-only"
         }' > bin/Release/net7.0/appsettings.json
-        
-        echo '{}' > FileSharer/bin/Release/net7.0/test-key.json
+
+        echo '{}' > bin/Release/net7.0/test-key.json
 
     - name: Test .NET backend
       run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
