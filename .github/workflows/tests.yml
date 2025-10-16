@@ -40,9 +40,10 @@ jobs:
           "JWTKEY": "test-jwt-key-for-testing-purposes-only"
         }' > bin/Release/net7.0/appsettings.json
 
-    - name: Create test-key.json
+    - name: Create dummy service account key
       run: |
-        echo ''
+        mkdir -p FileSharer/bin/Release/net7.0
+        cat > FileSharer/bin/Release/net7.0/test-key.json << 'EOF'
         {
           "type": "service_account",
           "project_id": "test-project",
@@ -54,7 +55,8 @@ jobs:
           "token_uri": "https://oauth2.googleapis.com/token",
           "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
           "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test@test-project.iam.gserviceaccount.com"
-        }' > bin/Release/net7.0/test-key.json'
+        }
+        EOF
         
     - name: Test .NET backend
       run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
