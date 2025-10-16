@@ -42,8 +42,7 @@ jobs:
 
     - name: Create dummy service account key
       run: |
-        mkdir -p FileSharer/bin/Release/net7.0
-        cat > FileSharer/bin/Release/net7.0/test-key.json << 'EOF'
+        cat > bin/Release/net7.0/test-key.json << 'EOF'
         {
           "type": "service_account",
           "project_id": "test-project",
