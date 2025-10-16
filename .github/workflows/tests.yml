@@ -27,7 +27,6 @@ jobs:
 
     - name: Create appsettings files for API and Tests
       run: |
-        # Configuration for the main API project
         echo '{
           "bucketName": "test-bucket",
           "keyFilename": "test-key.json",
@@ -35,7 +34,6 @@ jobs:
           "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
         }' > appsettings.json
         
-        # Configuration for the integration test project
         echo '{
           "bucketName": "test-bucket",
           "keyFilename": "test-key.json",
@@ -45,8 +43,7 @@ jobs:
 
     - name: Create dummy service account key (test-key.json)
       run: |
-        cat > FileSharer.Tests/test-key.json << EOF
-        {
+        echo '{
           "type": "service_account",
           "project_id": "test-project",
           "private_key_id": "fake-key-id",
@@ -57,8 +54,7 @@ jobs:
           "token_uri": "https://oauth2.googleapis.com/token",
           "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
           "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-service-account%40test-project.iam.gserviceaccount.com"
-        }
-        EOF
+        }' > FileSharer.Tests/test-key.json
 
     - name: Restore .NET dependencies
       run: dotnet restore
