@@ -25,8 +25,9 @@ jobs:
         cache: 'npm'
         cache-dependency-path: file-sharing-client/package-lock.json
 
-    - name: Create settings files
+    - name: Create appsettings files for API and Tests
       run: |
+        # Configuration for the main API project
         echo '{
           "bucketName": "test-bucket",
           "keyFilename": "test-key.json",
@@ -34,6 +35,7 @@ jobs:
           "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
         }' > appsettings.json
         
+        # Configuration for the integration test project
         echo '{
           "bucketName": "test-bucket",
           "keyFilename": "test-key.json",
@@ -41,27 +43,7 @@ jobs:
           "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
         }' > FileSharer.Tests/appsettings.Test.json
 
-    - name: Restore .NET dependencies
-      run: dotnet restore
-
-    - name: Build .NET project
-      run: dotnet build --no-restore --configuration Release
-      run: |
-        echo '{
-          "bucketName": "test-bucket",
-          "keyFilename": "test-key.json",
-          "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
-          "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
-        }' > FileSharer.Tests/appsettings.Test.json
-        
-        echo '{
-          "bucketName": "test-bucket",
-          "keyFilename": "test-key.json",
-          "connectionString": "Host=localhost;Database=testdb;Username=test;Password=test",
-          "JWTKEY": "test-jwt-key-for-testing-purposes-only-must-be-long-enough"
-        }' > appsettings.json
-
-    - name: Create dummy service account key
+    - name: Create dummy service account key (test-key.json)
       run: |
         cat > FileSharer.Tests/test-key.json << EOF
         {
@@ -77,7 +59,13 @@ jobs:
           "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-service-account%40test-project.iam.gserviceaccount.com"
         }
         EOF
-        
+
+    - name: Restore .NET dependencies
+      run: dotnet restore
+
+    - name: Build .NET project
+      run: dotnet build --no-restore --configuration Release
+
     - name: Test .NET backend
       run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
 
