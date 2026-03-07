@@ -3,14 +3,12 @@ import httpClient from '../httpClient';
 import File from '../component/File';
 import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCloudUploadAlt, faFolderOpen, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
-
+import { faCloudUploadAlt, faFolderOpen, faCheckCircle, faSpinner, faInbox } from '@fortawesome/free-solid-svg-icons';
 
 function Home() {
-  // const [file, setFile] = useState(null);
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  // const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [dragOver, setDragOver] = useState(false);
   const [uploadQueue, setUploadQueue] = useState([]);
   const [toast, setToast] = useState('');
@@ -73,9 +71,11 @@ function Home() {
   };
 
   const getFiles = () => {
-    httpClient.get('/files').then((res) => {
-      setData(res.data);
-    });
+    setLoading(true);
+    httpClient.get('/files')
+      .then((res) => setData(res.data))
+      .catch(() => setData([]))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -186,11 +186,22 @@ function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {data
-          .filter(filterData)
-          .map((item, index) => (
-            <File key={index} index={index} item={item} />
-        ))}
+          {loading ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-500">
+              <FontAwesomeIcon icon={faSpinner} className="text-5xl text-blue-500 animate-spin mb-4" />
+              <p className="text-lg font-medium">Loading files...</p>
+            </div>
+          ) : (data.filter(filterData).length === 0 ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+              <FontAwesomeIcon icon={faInbox} className="text-5xl text-gray-400 mb-4" />
+              <p className="text-lg font-medium">{searchTerm.trim() ? 'No files match your search' : 'No files yet'}</p>
+              <p className="text-sm mt-1">{searchTerm.trim() ? 'Try a different search term' : 'Upload a file above to get started'}</p>
+            </div>
+          ) : (
+            data.filter(filterData).map((item, index) => (
+              <File key={index} index={index} item={item} />
+            ))
+          ))}
         </div>
       </section>
     </div>
