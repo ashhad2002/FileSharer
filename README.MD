@@ -4,7 +4,7 @@ This is the New File Sharer I made, which is a remake of an old first year proje
 
 ## Usage
 
-Run dotnet restore, then dotnet run to run the server application. It's a minimal API application, I may change it to use MVC, but this is more than enough for now. You'll need to produce an appsettings.json in the root directory that looks something like this:
+Run dotnet restore, then dotnet run to run the server application. It's a minimal API application, I may change it to use MVC, but this is more than enough for now. Copy `appsettings.Example.json` to `appsettings.json` and set your values. Alternatively, create `appsettings.json` in the root with a structure like:
 
     {
     "bucketName": "BUCKET NAME GOES HERE",
